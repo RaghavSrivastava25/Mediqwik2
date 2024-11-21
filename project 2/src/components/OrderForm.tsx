@@ -26,56 +26,54 @@ const OrderForm: React.FC<OrderFormProps> = ({ onClose, initialMedicine = '' }) 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-  
+
     const validOrders = orders.filter(order => order.medicine && order.quantity > 0);
+    if (validOrders.length === 0) {
+        toast.error("Please add at least one valid medicine order.");
+        setIsSubmitting(false);
+        return;
+    }
+
     const currentDate = new Date().toLocaleDateString();
     const currentTime = new Date().toLocaleTimeString();
-  
-    // Order details validity
-    if (!name || !phone || !email || !address || validOrders.length === 0) {
-      toast.error("Please fill all required fields and add at least one valid order.");
-      setIsSubmitting(false);
-      return;
-    }
-  
-    // payLoad to send to Google Sheets
-    const dataToSend = validOrders.map(order => [
-      name,
-      phone,
-      email,
-      address,
-      order.medicine,
-      order.quantity,
-      currentDate,
-      currentTime
-    ]);
-  
-    console.log("Data to send:", dataToSend); // Debugging log
-  
+
+    const dataToSend = validOrders.map(order => ({
+        name,
+        phone,
+        email,
+        address,
+        medicine: order.medicine,
+        quantity: order.quantity,
+        date: currentDate,
+        time: currentTime,
+    }));
+
     try {
-      const response = await axios({
-        method: "post",
-        url: `${BACKEND_URL}?tabId=Sheet1`,
-        data: dataToSend
-      });
-  
-      if (response.status === 200) {
-        toast.success("Order placed successfully!");
-        onClose();
-      }
+        const response = await axios.post(
+            `${BACKEND_URL}?tabId=Sheet1`,
+            { data: dataToSend },
+            { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        if (response.status === 200) {
+            toast.success("Order placed successfully!");
+            onClose();
+        } else {
+            toast.error(`Failed to place order. Status: ${response.status}`);
+        }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Order submission error:", error.response?.data || error.message);
-        toast.error(`Failed to place order: ${error.response?.data?.error || error.message}`);
-      } else {
-        console.error("Unexpected error:", error);
-        toast.error("An unexpected error occurred.");
-      }
+        if (axios.isAxiosError(error)) {
+            toast.error(`Failed to place order: ${error.message}`);
+            console.error("Order submission error:", error.response?.data || error.message);
+        } else {
+            toast.error("An unexpected error occurred.");
+            console.error("Unexpected error:", error);
+        }
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
-  };
-  
+};
+
   
   const addOrder = () => {
     if (orders.length < 10) {
