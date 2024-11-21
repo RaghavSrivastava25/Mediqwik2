@@ -31,6 +31,14 @@ const OrderForm: React.FC<OrderFormProps> = ({ onClose, initialMedicine = '' }) 
     const currentDate = new Date().toLocaleDateString();
     const currentTime = new Date().toLocaleTimeString();
   
+    // Order details validity
+    if (!name || !phone || !email || !address || validOrders.length === 0) {
+      toast.error("Please fill all required fields and add at least one valid order.");
+      setIsSubmitting(false);
+      return;
+    }
+  
+    // payLoad to send to Google Sheets
     const dataToSend = validOrders.map(order => [
       name,
       phone,
@@ -41,6 +49,8 @@ const OrderForm: React.FC<OrderFormProps> = ({ onClose, initialMedicine = '' }) 
       currentDate,
       currentTime
     ]);
+  
+    console.log("Data to send:", dataToSend); // Debugging log
   
     try {
       const response = await axios({
@@ -55,16 +65,17 @@ const OrderForm: React.FC<OrderFormProps> = ({ onClose, initialMedicine = '' }) 
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        toast.error(`Failed to place order: ${error.message}`);
         console.error("Order submission error:", error.response?.data || error.message);
+        toast.error(`Failed to place order: ${error.response?.data?.error || error.message}`);
       } else {
-        toast.error("An unexpected error occurred.");
         console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred.");
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+  
   
   const addOrder = () => {
     if (orders.length < 10) {
